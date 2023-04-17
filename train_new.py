@@ -35,13 +35,10 @@ parser.add_argument("--mixmode", action="store_true",
                     default=False, help="Enable CPU GPU mixing mode.")
 parser.add_argument("--warm_start", default="",
                     help="The model name to be loaded for warm start.")
-parser.add_argument('--debug', action='store_true',
-                    default=True, help="Enable the detialed training output.")
 parser.add_argument('--dataset', default="cora", help="The data set")
 parser.add_argument('--datapath', default="data/", help="The data path.")
 parser.add_argument("--early_stopping", type=int, default=400,
                     help="The patience of earlystopping. Do not adopt the earlystopping when it equals 0.")
-parser.add_argument("--no_tensorboard", default=False, help="Disable writing logs to tensorboard")
 
 # Model parameter
 parser.add_argument('--type', default='mutigcn',
@@ -72,8 +69,7 @@ parser.add_argument("--aggrmethod", default="default",
 parser.add_argument("--task_type", default="full", help="The node classification task type (full and semi). Only valid for cora, citeseer and pubmed dataset.")
 
 args = parser.parse_args()
-if args.debug:
-    print(args)
+print(args)
 run = wandb.init(
     project='CAGCN-DropEdge-test',
     name='DropEdge-test',
@@ -207,20 +203,19 @@ def test(test_adj, test_fea):
     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
     auc_test = roc_auc_compute_fn(output[idx_test], labels[idx_test])
-    if args.debug:
-        print("Test set results:",
-              "loss= {:.4f}".format(loss_test.item()),
-              "auc= {:.4f}".format(auc_test),
-              "accuracy= {:.4f}".format(acc_test.item()))
-        print("accuracy=%.5f" % (acc_test.item()))
+    print("Test set results:",
+          "loss= {:.4f}".format(loss_test.item()),
+          "auc= {:.4f}".format(auc_test),
+          "accuracy= {:.4f}".format(acc_test.item()))
+    print("accuracy=%.5f" % (acc_test.item()))
     return loss_test.item(), acc_test.item()
 
 # Train model
-t_total = time.time()
+t_total    = time.time()
 loss_train = np.zeros((args.epochs,))
-acc_train = np.zeros((args.epochs,))
-loss_val = np.zeros((args.epochs,))
-acc_val = np.zeros((args.epochs,))
+acc_train  = np.zeros((args.epochs,))
+loss_val   = np.zeros((args.epochs,))
+acc_val    = np.zeros((args.epochs,))
 
 sampling_t = 0
 
@@ -261,17 +256,14 @@ for epoch in tqdm(range(args.epochs), desc="epoch"):
 if args.early_stopping > 0:
     model.load_state_dict(early_stopping.load_checkpoint())
 
-if args.debug:
-    print("Optimization Finished!")
-    print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 # Testing
 (test_adj, test_fea) = sampler.get_test_set(normalization=args.normalization, cuda=args.cuda)
 if args.mixmode:
     test_adj = test_adj.cuda()
 (loss_test, acc_test) = test(test_adj, test_fea)
-# print("%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f" % (
-# loss_train[-1], loss_val[-1], loss_test, acc_train[-1], acc_val[-1], acc_test))
+print("%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f" % (loss_train[-1], loss_val[-1], loss_test,
+                                              acc_train[-1], acc_val[-1], acc_test))
 run.log({
     'test/loss_train': loss_train[-1],
     'test/loss_val': loss_val[-1],
