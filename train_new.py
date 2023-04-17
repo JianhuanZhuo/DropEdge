@@ -1,26 +1,18 @@
 from __future__ import division
 from __future__ import print_function
 
-import time
 import argparse
+import time
+
 import numpy as np
-
-import torch
-import torch.nn.functional as F
 import torch.optim as optim
-# from tensorboardX import SummaryWriter
 import wandb
+from tqdm import tqdm
 
 from earlystopping import EarlyStopping
-from sample import Sampler
-from metric import accuracy, roc_auc_compute_fn
-# from deepgcn.utils import load_data, accuracy
-# from deepgcn.models import GCN
-
 from metric import accuracy
-from utils import load_citation, load_reddit_data
+from metric import roc_auc_compute_fn
 from models import *
-from earlystopping import EarlyStopping
 from sample import Sampler
 
 # Training settings
@@ -136,7 +128,6 @@ model = GCNModel(nfeat=nfeat,
 optimizer = optim.Adam(model.parameters(),
                        lr=args.lr, weight_decay=args.weight_decay)
 
-# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=50, factor=0.618)
 scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[200, 300, 400, 500, 600, 700], gamma=0.5)
 # convert to cuda
 if args.cuda:
@@ -242,7 +233,7 @@ acc_val = np.zeros((args.epochs,))
 
 sampling_t = 0
 
-for epoch in range(args.epochs):
+for epoch in tqdm(range(args.epochs), desc="epoch"):
     input_idx_train = idx_train
     sampling_t = time.time()
     # no sampling
@@ -264,16 +255,16 @@ for epoch in range(args.epochs):
             val_adj = val_adj.cuda()
         outputs = train(epoch, train_adj, train_fea, input_idx_train, val_adj, val_fea)
 
-    if args.debug and epoch % 1 == 0:
-        print('Epoch: {:04d}'.format(epoch + 1),
-              'loss_train: {:.4f}'.format(outputs[0]),
-              'acc_train: {:.4f}'.format(outputs[1]),
-              'loss_val: {:.4f}'.format(outputs[2]),
-              'acc_val: {:.4f}'.format(outputs[3]),
-              'cur_lr: {:.5f}'.format(outputs[4]),
-              's_time: {:.4f}s'.format(sampling_t),
-              't_time: {:.4f}s'.format(outputs[5]),
-              'v_time: {:.4f}s'.format(outputs[6]))
+    # if args.debug and epoch % 1 == 0:
+    #     print('Epoch: {:04d}'.format(epoch + 1),
+    #           'loss_train: {:.4f}'.format(outputs[0]),
+    #           'acc_train: {:.4f}'.format(outputs[1]),
+    #           'loss_val: {:.4f}'.format(outputs[2]),
+    #           'acc_val: {:.4f}'.format(outputs[3]),
+    #           'cur_lr: {:.5f}'.format(outputs[4]),
+    #           's_time: {:.4f}s'.format(sampling_t),
+    #           't_time: {:.4f}s'.format(outputs[5]),
+    #           'v_time: {:.4f}s'.format(outputs[6]))
 
     # if args.no_tensorboard is False:
     #     tb_writer.add_scalars('Loss', {'train': outputs[0], 'val': outputs[2]}, epoch)
@@ -282,13 +273,13 @@ for epoch in range(args.epochs):
     #     tb_writer.add_scalars('Time', {'train': outputs[5], 'val': outputs[6]}, epoch)
 
     run.log({
-        'Loss/train': outputs[0],
-        'Accu/train': outputs[1],
-        'Loss/val':   outputs[2],
-        'Accu/val':   outputs[3],
+        'loss_train': outputs[0],
+        'accs_train': outputs[1],
+        'loss_val':   outputs[2],
+        'accs_val':   outputs[3],
         'lr':         outputs[4],
-        'Time/train': outputs[5],
-        'Time/val':   outputs[6],
+        'time_train': outputs[5],
+        'time_val':   outputs[6],
     }, epoch)
 
     loss_train[epoch], acc_train[epoch], loss_val[epoch], acc_val[epoch] = outputs[0], outputs[1], outputs[2], outputs[
@@ -311,5 +302,15 @@ if args.debug:
 if args.mixmode:
     test_adj = test_adj.cuda()
 (loss_test, acc_test) = test(test_adj, test_fea)
-print("%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f" % (
-loss_train[-1], loss_val[-1], loss_test, acc_train[-1], acc_val[-1], acc_test))
+# print("%.6f\t%.6f\t%.6f\t%.6f\t%.6f\t%.6f" % (
+# loss_train[-1], loss_val[-1], loss_test, acc_train[-1], acc_val[-1], acc_test))
+run.log({
+    'test/loss_train': loss_train[-1],
+    'test/loss_val': loss_val[-1],
+    'test/loss_test': loss_test,
+    'test/acc_train': acc_train[-1],
+    'test/acc_val': acc_val[-1],
+    'test/acc_test': acc_test,
+})
+
+
