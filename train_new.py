@@ -150,15 +150,9 @@ if args.early_stopping > 0:
     early_stopping = EarlyStopping(patience=args.early_stopping, verbose=False)
     print("Model is saving to: %s" % (early_stopping.fname))
 
-# if args.no_tensorboard is False:
-#     tb_writer = SummaryWriter(
-#         comment=f"-dataset_{args.dataset}-type_{args.type}"
-#     )
-
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
-
 
 # define the training function.
 def train(epoch, train_adj, train_fea, idx_train, val_adj=None, val_fea=None):
@@ -190,8 +184,6 @@ def train(epoch, train_adj, train_fea, idx_train, val_adj=None, val_fea=None):
         early_stopping(loss_val, model)
 
     if not args.fastmode:
-        #    # Evaluate validation set performance separately,
-        #    # deactivates dropout during validation run.
         model.eval()
         output = model(val_fea, val_adj)
         loss_val = F.nll_loss(output[idx_val], labels[idx_val]).item()
@@ -206,7 +198,7 @@ def train(epoch, train_adj, train_fea, idx_train, val_adj=None, val_fea=None):
         scheduler.step()
 
     val_t = time.time() - val_t
-    return (loss_train.item(), acc_train.item(), loss_val, acc_val, get_lr(optimizer), train_t, val_t)
+    return loss_train.item(), acc_train.item(), loss_val, acc_val, get_lr(optimizer), train_t, val_t
 
 
 def test(test_adj, test_fea):
@@ -221,8 +213,7 @@ def test(test_adj, test_fea):
               "auc= {:.4f}".format(auc_test),
               "accuracy= {:.4f}".format(acc_test.item()))
         print("accuracy=%.5f" % (acc_test.item()))
-    return (loss_test.item(), acc_test.item())
-
+    return loss_test.item(), acc_test.item()
 
 # Train model
 t_total = time.time()
@@ -245,32 +236,10 @@ for epoch in tqdm(range(args.epochs), desc="epoch"):
 
     sampling_t = time.time() - sampling_t
     
-    # The validation set is controlled by idx_val
-    # if sampler.learning_type == "transductive":
-    if False:
-        outputs = train(epoch, train_adj, train_fea, input_idx_train)
-    else:
-        (val_adj, val_fea) = sampler.get_test_set(normalization=args.normalization, cuda=args.cuda)
-        if args.mixmode:
-            val_adj = val_adj.cuda()
-        outputs = train(epoch, train_adj, train_fea, input_idx_train, val_adj, val_fea)
-
-    # if args.debug and epoch % 1 == 0:
-    #     print('Epoch: {:04d}'.format(epoch + 1),
-    #           'loss_train: {:.4f}'.format(outputs[0]),
-    #           'acc_train: {:.4f}'.format(outputs[1]),
-    #           'loss_val: {:.4f}'.format(outputs[2]),
-    #           'acc_val: {:.4f}'.format(outputs[3]),
-    #           'cur_lr: {:.5f}'.format(outputs[4]),
-    #           's_time: {:.4f}s'.format(sampling_t),
-    #           't_time: {:.4f}s'.format(outputs[5]),
-    #           'v_time: {:.4f}s'.format(outputs[6]))
-
-    # if args.no_tensorboard is False:
-    #     tb_writer.add_scalars('Loss', {'train': outputs[0], 'val': outputs[2]}, epoch)
-    #     tb_writer.add_scalars('Accuracy', {'train': outputs[1], 'val': outputs[3]}, epoch)
-    #     tb_writer.add_scalar('lr', outputs[4], epoch)
-    #     tb_writer.add_scalars('Time', {'train': outputs[5], 'val': outputs[6]}, epoch)
+    (val_adj, val_fea) = sampler.get_test_set(normalization=args.normalization, cuda=args.cuda)
+    if args.mixmode:
+        val_adj = val_adj.cuda()
+    outputs = train(epoch, train_adj, train_fea, input_idx_train, val_adj, val_fea)
 
     run.log({
         'loss_train': outputs[0],
@@ -282,8 +251,7 @@ for epoch in tqdm(range(args.epochs), desc="epoch"):
         'time_val':   outputs[6],
     }, epoch)
 
-    loss_train[epoch], acc_train[epoch], loss_val[epoch], acc_val[epoch] = outputs[0], outputs[1], outputs[2], outputs[
-        3]
+    loss_train[epoch], acc_train[epoch], loss_val[epoch], acc_val[epoch] = outputs[0], outputs[1], outputs[2], outputs[3]
 
     if args.early_stopping > 0 and early_stopping.early_stop:
         print("Early stopping.")
