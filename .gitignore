@@ -106,3 +106,6 @@ venv.bak/
 # check scripts
 check.sh
 reproduce_check.py
+
+
+.idea
