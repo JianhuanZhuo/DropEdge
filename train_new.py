@@ -18,62 +18,59 @@ from sample import Sampler
 # Training settings
 parser = argparse.ArgumentParser()
 # Training parameter 
-parser.add_argument('--no_cuda', action='store_true', default=False,
-                    help='Disables CUDA training.')
-parser.add_argument('--fastmode', action='store_true', default=False,
-                    help='Disable validation during training.')
+parser.add_argument('--no_cuda', action='store_true', default=False, help='Disables CUDA training.')
+parser.add_argument('--fastmode', action='store_true', default=False, help='Disable validation during training.')
 parser.add_argument('--seed', type=int, default=42, help='Random seed.')
-parser.add_argument('--epochs', type=int, default=400,
-                    help='Number of epochs to train.')
-parser.add_argument('--lr', type=float, default=0.01,
-                    help='Initial learning rate.')
-parser.add_argument('--lradjust', action='store_true',
-                    default=False, help='Enable leraning rate adjust.(ReduceLROnPlateau or Linear Reduce)')
-parser.add_argument('--weight_decay', type=float, default=0.005,
-                    help='Weight decay (L2 loss on parameters).')
-parser.add_argument("--mixmode", action="store_true",
-                    default=False, help="Enable CPU GPU mixing mode.")
-parser.add_argument("--warm_start", default="",
-                    help="The model name to be loaded for warm start.")
+parser.add_argument('--epochs', type=int, default=400, help='Number of epochs to train.')
+parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate.')
+parser.add_argument('--lradjust', action='store_true', default=False, help='(ReduceLROnPlateau or Linear Reduce)')
+parser.add_argument('--weight_decay', type=float, default=0.005, help='Weight decay (L2 loss on parameters).')
+parser.add_argument("--mixmode", action="store_true", default=False, help="Enable CPU GPU mixing mode.")
+parser.add_argument("--warm_start", default="", help="The model name to be loaded for warm start.")
 parser.add_argument('--dataset', default="cora", help="The data set")
 parser.add_argument('--datapath', default="data/", help="The data path.")
-parser.add_argument("--early_stopping", type=int, default=400,
-                    help="The patience of earlystopping. Do not adopt the earlystopping when it equals 0.")
+parser.add_argument("--early_stopping", type=int, default=400, help="The patience of earlystopping. Do not when 0.")
+parser.add_argument('--worker', type=bool, default=False)
 
 # Model parameter
-parser.add_argument('--type', default='mutigcn',
-                    help="Choose the model to be trained.(mutigcn, resgcn, densegcn, inceptiongcn)")
-parser.add_argument('--inputlayer', default='gcn',
-                    help="The input layer of the model.")
-parser.add_argument('--outputlayer', default='gcn',
-                    help="The output layer of the model.")
-parser.add_argument('--hidden', type=int, default=128,
-                    help='Number of hidden units.')
-parser.add_argument('--dropout', type=float, default=0.8,
-                    help='Dropout rate (1 - keep probability).')
-parser.add_argument('--withbn', action='store_true', default=False,
-                    help='Enable Bath Norm GCN')
-parser.add_argument('--withloop', action="store_true", default=False,
-                    help="Enable loop layer GCN")
-parser.add_argument('--nhiddenlayer', type=int, default=1,
-                    help='The number of hidden layers.')
-parser.add_argument("--normalization", default="FirstOrderGCN",
-                    help="The normalization on the adj matrix.")
-parser.add_argument("--sampling_percent", type=float, default=0.7,
-                    help="The percent of the preserve edges. If it equals 1, no sampling is done on adj matrix.")
-# parser.add_argument("--baseblock", default="res", help="The base building block (resgcn, densegcn, mutigcn, inceptiongcn).")
-parser.add_argument("--nbaseblocklayer", type=int, default=2,
-                    help="The number of layers in each baseblock")
-parser.add_argument("--aggrmethod", default="default",
-                    help="The aggrmethod for the layer aggreation. The options includes add and concat. Only valid in resgcn, densegcn and inecptiongcn")
-parser.add_argument("--task_type", default="full", help="The node classification task type (full and semi). Only valid for cora, citeseer and pubmed dataset.")
+parser.add_argument('--type', default='mutigcn', help="(mutigcn, resgcn, densegcn, inceptiongcn)")
+parser.add_argument('--inputlayer', default='gcn', help="The input layer of the model.")
+parser.add_argument('--outputlayer', default='gcn', help="The output layer of the model.")
+parser.add_argument('--hidden', type=int, default=128,   help='Number of hidden units.')
+parser.add_argument('--dropout', type=float, default=0.8,  help='Dropout rate (1 - keep probability).')
+parser.add_argument('--withbn', action='store_true', default=False,  help='Enable Bath Norm GCN')
+parser.add_argument('--withloop', action="store_true", default=False, help="Enable loop layer GCN")
+parser.add_argument('--nhiddenlayer', type=int, default=1, help='The number of hidden layers.')
+parser.add_argument("--normalization", default="FirstOrderGCN", help="The normalization on the adj matrix.")
+parser.add_argument("--sampling_percent", type=float, default=0.7, help="The percent. If 1, no sampling")
+parser.add_argument("--nbaseblocklayer", type=int, default=2,  help="The number of layers in each baseblock")
+parser.add_argument("--aggrmethod", default="default", help="The aggrmethod for the layer aggreation. "
+                                                            "The options includes add and concat. "
+                                                            "Only valid in resgcn, densegcn and inecptiongcn")
+parser.add_argument("--task_type", default="full", help="The node classification task type (full and semi). "
+                                                        "Only valid for cora, citeseer and pubmed dataset.")
 
 args = parser.parse_args()
+
+if args.worker:
+    run = wandb.init()
+    for k, v in run.config.items():
+        setattr(args, k, v)
+    names = '-'.join([
+        f'{k}{v}'
+        for k, v in sorted(run.config.items())
+    ])
+    run.name = f"run-{names}"
+else:
+    run = wandb.init(
+        project='CAGCN-DropEdge-test',
+        name='DropEdge-test',
+        allow_val_change=True)
+
+print("-="*40)
 print(args)
-run = wandb.init(
-    project='CAGCN-DropEdge-test',
-    name='DropEdge-test',
-    allow_val_change=True)
+print("-="*40)
+
 # pre setting
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 args.mixmode = args.no_cuda and args.mixmode and torch.cuda.is_available()
@@ -82,9 +79,7 @@ if args.aggrmethod == "default":
         args.aggrmethod = "add"
     else:
         args.aggrmethod = "concat"
-if args.fastmode and args.early_stopping > 0:
-    args.early_stopping = 0
-    print("In the fast mode, early_stopping is not valid option. Setting early_stopping = 0.")
+
 if args.type == "mutigcn":
     print("For the multi-layer gcn model, the aggrmethod is fixed to nores and nhiddenlayers = 1.")
     args.nhiddenlayer = 1
@@ -172,23 +167,16 @@ def train(epoch, train_adj, train_fea, idx_train, val_adj=None, val_fea=None):
     optimizer.step()
     train_t = time.time() - t
     val_t = time.time()
-    # We can not apply the fastmode for the reddit dataset.
-    # if sampler.learning_type == "inductive" or not args.fastmode:
-
     if args.early_stopping > 0 and sampler.dataset != "reddit":
         loss_val = F.nll_loss(output[idx_val], labels[idx_val]).item()
         early_stopping(loss_val, model)
 
-    if not args.fastmode:
-        model.eval()
-        output = model(val_fea, val_adj)
-        loss_val = F.nll_loss(output[idx_val], labels[idx_val]).item()
-        acc_val = accuracy(output[idx_val], labels[idx_val]).item()
-        if sampler.dataset == "reddit":
-            early_stopping(loss_val, model)
-    else:
-        loss_val = 0
-        acc_val = 0
+    model.eval()
+    output = model(val_fea, val_adj)
+    loss_val = F.nll_loss(output[idx_val], labels[idx_val]).item()
+    acc_val = accuracy(output[idx_val], labels[idx_val]).item()
+    if sampler.dataset == "reddit":
+        early_stopping(loss_val, model)
 
     if args.lradjust:
         scheduler.step()
