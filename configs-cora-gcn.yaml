@@ -1,0 +1,28 @@
+wandb:
+    command:
+        - ${env}
+        - python3
+        - train_dropedge.py
+        - '--worker=True'
+    method: grid
+    name: PTDNet-tuning
+    metric:
+        name: test_acc
+        goal: maximize
+    parameters:
+        lr:
+            values: [0.1, 0.01, 0.001, 0.0001]
+        weight_decay:
+            values: [0, 5e-3, 0.005, 0.05]
+        dropout:
+            values: [0, 0.3, 0.5, 0.8, 0.9]
+        withbn:
+            values: [True, False]
+        withloop:
+            values: [True, False]
+        nbaseblocklayer:
+            values: [1, 2, 4, 8]
+        sampling_percent:
+            values: [0.3, 0.5, 0.8, 1.0]
+        sd:
+            values: [mutigcn, resgcn, densegcn, inceptiongcn]

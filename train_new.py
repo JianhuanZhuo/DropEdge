@@ -19,17 +19,16 @@ from sample import Sampler
 parser = argparse.ArgumentParser()
 # Training parameter 
 parser.add_argument('--no_cuda', action='store_true', default=False, help='Disables CUDA training.')
-parser.add_argument('--fastmode', action='store_true', default=False, help='Disable validation during training.')
-parser.add_argument('--seed', type=int, default=42, help='Random seed.')
+parser.add_argument("--mixmode", action="store_true", default=False, help="Enable CPU GPU mixing mode.")
+parser.add_argument('--lradjust', action='store_true', default=False, help='(ReduceLROnPlateau or Linear Reduce)')
 parser.add_argument('--epochs', type=int, default=400, help='Number of epochs to train.')
 parser.add_argument('--lr', type=float, default=0.01, help='Initial learning rate.')
-parser.add_argument('--lradjust', action='store_true', default=False, help='(ReduceLROnPlateau or Linear Reduce)')
 parser.add_argument('--weight_decay', type=float, default=0.005, help='Weight decay (L2 loss on parameters).')
-parser.add_argument("--mixmode", action="store_true", default=False, help="Enable CPU GPU mixing mode.")
 parser.add_argument("--warm_start", default="", help="The model name to be loaded for warm start.")
 parser.add_argument('--dataset', default="cora", help="The data set")
 parser.add_argument('--datapath', default="data/", help="The data path.")
 parser.add_argument("--early_stopping", type=int, default=400, help="The patience of earlystopping. Do not when 0.")
+parser.add_argument('--seed', type=int, default=42, help='Random seed.')
 parser.add_argument('--worker', type=bool, default=False)
 
 # Model parameter
