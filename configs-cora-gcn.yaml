@@ -2,12 +2,12 @@ wandb:
     command:
         - ${env}
         - python3
-        - train_dropedge.py
+        - train_new.py
         - '--worker=True'
     method: grid
-    name: PTDNet-tuning
+    name: DropEdge-tuning
     metric:
-        name: test_acc
+        name: test/acc_test
         goal: maximize
     parameters:
         lr:

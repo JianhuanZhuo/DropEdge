@@ -10,4 +10,4 @@ if __name__ == '__main__':
     for k, vs in dbs['parameters'].items():
         total *= len(vs['values'])
     print(f"total: {total}")
-    # sweep_id = wandb.sweep(sweep=dbs, project='CAGCN-DropEdge-search')
+    sweep_id = wandb.sweep(sweep=dbs, project='CAGCN-DropEdge-search')
